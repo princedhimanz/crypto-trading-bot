@@ -11,7 +11,7 @@ module.exports = {
    * @param lower
    * @returns {number} percent value in integer
    */
-  getBollingerBandPercent: function(currentPrice, upper, lower) {
+  getBollingerBandPercent: function (currentPrice, upper, lower) {
     return (currentPrice - lower) / (upper - lower);
   },
 
@@ -23,7 +23,7 @@ module.exports = {
    * @param lower
    * @returns {number} percent value in integer
    */
-  getPercentTrendStrength: function(lookbackPrices) {
+  getPercentTrendStrength: function (lookbackPrices) {
     if (lookbackPrices.length < 9) {
       return undefined;
     }
@@ -41,11 +41,11 @@ module.exports = {
   },
 
   /**
-   * 
-   * @param {*} canles 
-   * @param {*} lenght 
+   *
+   * @param {*} canles
+   * @param {*} lenght
    */
-  candles2MarketData: function(candles, length = 1000, keys = ['open', 'close', 'high', 'low', 'volume']) {
+  candles2MarketData: function (candles, length = 1000, keys = ['open', 'close', 'high', 'low', 'volume']) {
     return keys.reduce((acc, k) => ({ ...acc, [k]: candles.slice(-length).map(c => c[k]) }), {});
   },
 
@@ -53,9 +53,8 @@ module.exports = {
    * @param lookbacks oldest first
    * @returns {Promise<any>}
    */
-  getPredefinedIndicators: function(lookbacks) {
+  getPredefinedIndicators: function (lookbacks) {
     return new Promise(resolve => {
-
       const indicators = new IndicatorBuilder();
       indicators.add('sma_200', 'sma', undefined, { length: 200 });
       indicators.add('sma_50', 'sma', undefined, { length: 50 });
@@ -69,7 +68,7 @@ module.exports = {
       indicators.add('bollinger_bands', 'bb', undefined, { length: 20, stddev: 2 });
       indicators.add('stoch_rsi', 'stoch_rsi', undefined, { rsi_length: 14, stoch_length: 14, k: 3, d: 3 });
       indicators.add('wicked', 'wicked');
-      
+
       const results = this.createIndicatorsLookback(lookbacks, indicators.all());
       resolve(results);
     });
@@ -79,17 +78,15 @@ module.exports = {
    *  Function called from createIndicatorsLookback, several times.
    *  Calculates only "Ready" indicators, with calculated source data
    */
-  calculateReadyIndicators: function(indicators, results) {
+  calculateReadyIndicators: function (indicators, results) {
     const { sourceCandle } = Indicators;
     return indicators
-      .map(indicator => (
-        { ...indicator, source: indicator.source || (sourceCandle.includes(indicator.indicator) ? 'candles' : 'close') })) // figure out indicator source    
+      .map(indicator => ({ ...indicator, source: indicator.source || (sourceCandle.includes(indicator.indicator) ? 'candles' : 'close') })) // figure out indicator source
       .filter(({ key }) => !(key in results)) // skip already calculated indicators
       .filter(({ source }) => source in results.candles[0] || source in results) // skip without source data
       .map(indicator => {
-
         const { indicator: indicatorName, source } = indicator;
-        
+
         // Extract source from candle if it's candle data
         const sourceData = source in results.candles[0] ? results.candles.map(v => v[source]) : results[source];
 
@@ -108,7 +105,7 @@ module.exports = {
    * @param lookbacks oldest first
    * @returns {Promise<any>}
    */
-  createIndicatorsLookback: async function(lookbacks, indicators) {
+  createIndicatorsLookback: async function (lookbacks, indicators) {
     // return new Promise(resolve => {
     if (lookbacks.length > 1 && lookbacks[0].time > lookbacks[1].time) {
       throw Error(`'Invalid candlestick order`);
@@ -123,30 +120,25 @@ module.exports = {
     return calculations;
   },
 
-  getTrendingDirection: function(lookbacks) {
+  getTrendingDirection: function (lookbacks) {
     const currentValue = lookbacks.slice(-1)[0];
 
-    return (lookbacks[lookbacks.length - 2] + lookbacks[lookbacks.length - 3] + lookbacks[lookbacks.length - 4]) / 3 >
-      currentValue
-      ? 'down'
-      : 'up';
+    return (lookbacks[lookbacks.length - 2] + lookbacks[lookbacks.length - 3] + lookbacks[lookbacks.length - 4]) / 3 > currentValue ? 'down' : 'up';
   },
 
-  getTrendingDirectionLastItem: function(lookbacks) {
+  getTrendingDirectionLastItem: function (lookbacks) {
     return lookbacks[lookbacks.length - 2] > lookbacks[lookbacks.length - 1] ? 'down' : 'up';
   },
 
-  getCrossedSince: function(lookbacks) {
+  getCrossedSince: function (lookbacks) {
     const values = lookbacks.slice().reverse(lookbacks);
     const currentValue = values[0];
 
     for (let i = 1; i < values.length - 1; i++) {
-      if (currentValue < 0 && values[i] > 0 || currentValue >= 0 && values[i] < 0) {
+      if ((currentValue < 0 && values[i] > 0) || (currentValue >= 0 && values[i] < 0)) {
         return i;
       }
     }
-
-    return;
   },
 
   /**
@@ -154,7 +146,7 @@ module.exports = {
    *
    * https://www.fidelity.com/learning-center/trading-investing/technical-analysis/technical-indicator-guide/pivot-points-high-low
    */
-  getPivotPoints: function(prices, left, right) {
+  getPivotPoints: function (prices, left, right) {
     if (left + right + 1 > prices.length || left <= 1 || right < 0) {
       return {};
     }
@@ -169,17 +161,11 @@ module.exports = {
     const leftRange = range.slice(0, left);
     const rightRange = range.slice(-right);
 
-    if (
-      typeof leftRange.find(c => c > middleValue) === 'undefined' &&
-      typeof rightRange.find(c => c > middleValue) === 'undefined'
-    ) {
+    if (typeof leftRange.find(c => c > middleValue) === 'undefined' && typeof rightRange.find(c => c > middleValue) === 'undefined') {
       result.high = middleValue;
     }
 
-    if (
-      typeof leftRange.find(c => c < middleValue) === 'undefined' &&
-      typeof rightRange.find(c => c < middleValue) === 'undefined'
-    ) {
+    if (typeof leftRange.find(c => c < middleValue) === 'undefined' && typeof rightRange.find(c => c < middleValue) === 'undefined') {
       result.low = middleValue;
     }
 
@@ -194,7 +180,7 @@ module.exports = {
    *
    * https://www.fidelity.com/learning-center/trading-investing/technical-analysis/technical-indicator-guide/pivot-points-high-low
    */
-  getPivotPointsWithWicks: function(candles, left, right) {
+  getPivotPointsWithWicks: function (candles, left, right) {
     if (left + right + 1 > candles.length || left <= 1 || right < 0) {
       return {};
     }
